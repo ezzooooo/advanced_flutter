@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "866349091256",
+    "project_id": "juwon-fcm-demo-test",
+    "storage_bucket": "juwon-fcm-demo-test.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:866349091256:android:b46955ca1fef07aeb5674d",
+        "android_client_info": {
+          "package_name": "com.sparta.advanced_flutter"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAqrYAUGLJbItBw3e7xd4oT01tHlahOtc8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

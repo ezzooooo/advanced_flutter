@@ -1,4 +1,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- FCM 알림 권한 (Android 13+) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- 진동 권한 -->
+    <uses-permission android:name="android.permission.VIBRATE"/>
+    <!-- 인터넷 권한 -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    
     <application
         android:label="advanced_flutter"
         android:name="${applicationName}"
@@ -24,7 +31,28 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            
+            <!-- 딥링크 처리를 위한 Intent Filter -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:scheme="advancedflutter"
+                    android:host="app"/>
+            </intent-filter>
         </activity>
+        
+        <!-- FCM 기본 알림 채널 설정 -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="my_app_channel"/>
+        
+        <!-- FCM 기본 알림 아이콘 (선택사항) -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@mipmap/ic_launcher"/>
+            
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
