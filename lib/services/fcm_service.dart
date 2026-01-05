@@ -1,9 +1,9 @@
-import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'local_notification_service.dart';
+import 'topic_service.dart';
 
 /// ========================================
 /// FCM 서비스 클래스
@@ -43,9 +43,10 @@ class FcmService {
   // Firebase Messaging 인스턴스
   final FirebaseMessaging _messaging = FirebaseMessaging.instance;
 
-  // 로컬 알림 플러그인 (포그라운드 알림 표시용)
-  final FlutterLocalNotificationsPlugin _localNotifications =
-      FlutterLocalNotificationsPlugin();
+  // 분리된 서비스들
+  final LocalNotificationService _localNotificationService =
+      LocalNotificationService();
+  final TopicService _topicService = TopicService();
 
   // 알림 클릭 시 호출될 콜백 (백그라운드/종료 상태)
   Function(RemoteMessage)? onMessageOpenedApp;
@@ -55,7 +56,11 @@ class FcmService {
 
   // 로컬 알림 클릭 시 호출될 콜백 (포그라운드)
   // Map에는 title, body, data가 포함됩니다.
-  Function(Map<String, dynamic>)? onLocalNotificationTapped;
+  Function(Map<String, dynamic>)? get onLocalNotificationTapped =>
+      _localNotificationService.onNotificationTapped;
+  set onLocalNotificationTapped(Function(Map<String, dynamic>)? callback) {
+    _localNotificationService.onNotificationTapped = callback;
+  }
 
   /// ========================================
   /// 1. FCM 초기화
@@ -68,10 +73,10 @@ class FcmService {
     await _requestPermission();
 
     // 로컬 알림 초기화
-    await _initializeLocalNotifications();
+    await _localNotificationService.initialize();
 
     // 알림 채널 생성 (Android)
-    await _createNotificationChannel();
+    await _localNotificationService.createNotificationChannel();
 
     // 포그라운드 메시지 리스너 설정
     _setupMessageListeners();
@@ -116,56 +121,7 @@ class FcmService {
   }
 
   /// ========================================
-  /// 3. 로컬 알림 초기화
-  /// ========================================
-  Future<void> _initializeLocalNotifications() async {
-    // Android 설정
-    const androidSettings = AndroidInitializationSettings(
-      '@mipmap/ic_launcher',
-    );
-
-    // iOS 설정
-    const iosSettings = DarwinInitializationSettings(
-      requestAlertPermission: false, // FCM에서 이미 요청했으므로 false
-      requestBadgePermission: false,
-      requestSoundPermission: false,
-    );
-
-    const initSettings = InitializationSettings(
-      android: androidSettings,
-      iOS: iosSettings,
-    );
-
-    await _localNotifications.initialize(
-      initSettings,
-      onDidReceiveNotificationResponse: _onNotificationTapped,
-    );
-  }
-
-  /// ========================================
-  /// 4. 알림 채널 생성 (Android 8.0+)
-  /// ========================================
-  Future<void> _createNotificationChannel() async {
-    const channel = AndroidNotificationChannel(
-      'my_app_channel', // ID (AndroidManifest.xml과 일치해야 함)
-      '중요 알림', // 이름 (설정에서 사용자에게 표시됨)
-      description: '이 채널은 중요한 알림에 사용됩니다.',
-      importance: Importance.high, // 중요도 (헤드업 알림 표시)
-      playSound: true,
-      enableVibration: true,
-    );
-
-    await _localNotifications
-        .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin
-        >()
-        ?.createNotificationChannel(channel);
-
-    log('📢 알림 채널 생성 완료: ${channel.id}');
-  }
-
-  /// ========================================
-  /// 5. 메시지 리스너 설정
+  /// 3. 메시지 리스너 설정
   /// ========================================
   void _setupMessageListeners() {
     // 포그라운드에서 메시지 수신
@@ -180,7 +136,7 @@ class FcmService {
 
       // 포그라운드에서는 알림이 자동으로 표시되지 않으므로
       // 로컬 알림으로 직접 표시합니다.
-      _showLocalNotification(message);
+      _localNotificationService.showNotification(message);
     });
 
     // 백그라운드에서 알림 클릭으로 앱이 열린 경우
@@ -194,7 +150,7 @@ class FcmService {
   }
 
   /// ========================================
-  /// 6. 앱 종료 상태에서 알림 클릭 처리
+  /// 4. 앱 종료 상태에서 알림 클릭 처리
   /// ========================================
   Future<void> _handleInitialMessage() async {
     // 앱이 완전히 종료된 상태에서 알림을 클릭하여 앱이 실행된 경우
@@ -212,77 +168,7 @@ class FcmService {
   }
 
   /// ========================================
-  /// 7. 로컬 알림 표시 (포그라운드용)
-  /// ========================================
-  Future<void> _showLocalNotification(RemoteMessage message) async {
-    final notification = message.notification;
-    if (notification == null) return;
-
-    const androidDetails = AndroidNotificationDetails(
-      'my_app_channel',
-      '중요 알림',
-      channelDescription: '이 채널은 중요한 알림에 사용됩니다.',
-      importance: Importance.high,
-      priority: Priority.high,
-      showWhen: true,
-      icon: '@mipmap/ic_launcher',
-    );
-
-    const iosDetails = DarwinNotificationDetails(
-      presentAlert: true,
-      presentBadge: true,
-      presentSound: true,
-    );
-
-    const details = NotificationDetails(
-      android: androidDetails,
-      iOS: iosDetails,
-    );
-
-    // 알림 ID 생성 (messageId의 해시값 사용)
-    final notificationId =
-        message.messageId?.hashCode ??
-        DateTime.now().millisecondsSinceEpoch ~/ 1000;
-
-    // 클릭 시 전달할 데이터를 JSON으로 저장
-    final payload = jsonEncode({
-      'title': notification.title,
-      'body': notification.body,
-      'data': message.data,
-    });
-
-    await _localNotifications.show(
-      notificationId,
-      notification.title,
-      notification.body,
-      details,
-      payload: payload,
-    );
-  }
-
-  /// ========================================
-  /// 8. 로컬 알림 클릭 처리 (포그라운드)
-  /// ========================================
-  void _onNotificationTapped(NotificationResponse response) {
-    log('🔔 로컬 알림 클릭! (포그라운드)');
-    log('   Payload: ${response.payload}');
-
-    if (response.payload == null || response.payload!.isEmpty) return;
-
-    try {
-      // JSON 파싱
-      final Map<String, dynamic> payloadData = jsonDecode(response.payload!);
-      log('   파싱된 데이터: $payloadData');
-
-      // 콜백 호출
-      onLocalNotificationTapped?.call(payloadData);
-    } catch (e) {
-      log('❌ Payload 파싱 실패: $e');
-    }
-  }
-
-  /// ========================================
-  /// 9. FCM 토큰 가져오기
+  /// 5. FCM 토큰 가져오기
   /// ========================================
   ///
   /// [주의] iOS 시뮬레이터에서는 APNS 토큰을 받을 수 없어서
@@ -324,38 +210,23 @@ class FcmService {
   }
 
   /// ========================================
-  /// 10. 토픽 구독
+  /// 6. 토픽 구독
   /// ========================================
-  ///
-  /// 토픽(Topic)은 특정 주제에 관심 있는 사용자들에게
-  /// 메시지를 보내는 방법입니다.
-  ///
-  /// 예시:
-  /// - 'news': 뉴스 알림 구독자
-  /// - 'promo': 프로모션/이벤트 알림 구독자
-  /// - 'sports': 스포츠 소식 구독자
-  ///
   Future<void> subscribeToTopic(String topic) async {
-    await _messaging.subscribeToTopic(topic);
-    log('✅ 토픽 구독 완료: $topic');
+    await _topicService.subscribe(topic);
   }
 
   /// ========================================
-  /// 11. 토픽 구독 해제
+  /// 7. 토픽 구독 해제
   /// ========================================
   Future<void> unsubscribeFromTopic(String topic) async {
-    await _messaging.unsubscribeFromTopic(topic);
-    log('❌ 토픽 구독 해제: $topic');
+    await _topicService.unsubscribe(topic);
   }
 
   /// ========================================
-  /// 12. 알림 뱃지 초기화 (iOS)
+  /// 8. 알림 뱃지 초기화 (iOS)
   /// ========================================
   Future<void> clearBadge() async {
-    await _localNotifications
-        .resolvePlatformSpecificImplementation<
-          IOSFlutterLocalNotificationsPlugin
-        >()
-        ?.requestPermissions(badge: true);
+    await _localNotificationService.clearBadge();
   }
 }
