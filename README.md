@@ -38,8 +38,11 @@ dart pub global activate flutterfire_cli
 
 > ⚠️ **PATH 설정 안내**  
 > 설치 후 `flutterfire` 명령어가 인식되지 않으면 아래 경로를 PATH에 추가하세요:
+>
 > - macOS/Linux: `~/.pub-cache/bin`
 > - Windows: `%LOCALAPPDATA%\Pub\Cache\bin`
+
+com.회사명.어플명 <-
 
 #### 3-2. Firebase 로그인 (최초 1회)
 
@@ -60,12 +63,13 @@ flutterfire configure
 실행하면 다음과 같은 질문이 나옵니다:
 
 1. **Select a Firebase project**: 위에서 생성한 프로젝트 선택
-2. **Which platforms should your configuration support?**: 
+2. **Which platforms should your configuration support?**:
    - `android`, `ios` 선택 (Space로 선택, Enter로 확인)
-3. **Android package name**: 엔터 (기본값 사용: `com.sparta.advanced_flutter`)
+3. **Android package name**: 엔터 (기본값 사용: `com.spartaadvanced_flutter`)
 4. **iOS bundle id**: 엔터 (기본값 사용)
 
 완료되면 자동으로 다음 파일들이 생성/수정됩니다:
+
 - `lib/firebase_options.dart` (자동 생성)
 - `android/app/google-services.json` (자동 생성)
 - `ios/Runner/GoogleService-Info.plist` (자동 생성)
@@ -80,12 +84,12 @@ import 'firebase_options.dart';  // 이 줄 추가
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Firebase 초기화 (options 추가)
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,  // 이 줄 수정
   );
-  
+
   runApp(const MyApp());
 }
 ```
@@ -145,18 +149,20 @@ flutter run -d ios
 
 #### 알림 작성
 
-| 항목 | 입력값 예시 |
-|------|------------|
-| 알림 제목 | `안녕하세요! 🎉` |
+| 항목        | 입력값 예시                   |
+| ----------- | ----------------------------- |
+| 알림 제목   | `안녕하세요! 🎉`              |
 | 알림 텍스트 | `FCM 푸시 알림 테스트입니다.` |
 
 #### 타겟 설정
 
 **방법 1: 특정 기기로 전송 (FCM 토큰 사용)**
+
 1. 앱에서 FCM 토큰 복사
 2. 타겟 → 단일 기기 → 토큰 붙여넣기
 
 **방법 2: 토픽 구독자에게 전송**
+
 1. 앱에서 토픽 구독 (예: `news`, `promo`)
 2. 타겟 → 토픽 → 토픽명 입력
 
@@ -164,11 +170,11 @@ flutter run -d ios
 
 **추가 옵션** → **맞춤 데이터**에서 키-값 쌍 추가:
 
-| Key | Value | 설명 |
-|-----|-------|------|
+| Key      | Value    | 설명                    |
+| -------- | -------- | ----------------------- |
 | `screen` | `detail` | 알림 상세 화면으로 이동 |
-| `screen` | `promo` | 프로모션 화면으로 이동 |
-| `id` | `123` | 화면에 전달할 ID |
+| `screen` | `promo`  | 프로모션 화면으로 이동  |
+| `id`     | `123`    | 화면에 전달할 ID        |
 
 ---
 
@@ -190,10 +196,10 @@ lib/
 
 ## 🔗 딥링크 URL 스킴
 
-| URL | 대상 화면 |
-|-----|----------|
-| `advancedflutter://app/detail?id=123` | 알림 상세 화면 |
-| `advancedflutter://app/promo?id=PROMO2024` | 프로모션 화면 |
+| URL                                        | 대상 화면      |
+| ------------------------------------------ | -------------- |
+| `advancedflutter://app/detail?id=123`      | 알림 상세 화면 |
+| `advancedflutter://app/promo?id=PROMO2024` | 프로모션 화면  |
 
 ---
 

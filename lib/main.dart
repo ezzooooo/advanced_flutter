@@ -20,7 +20,7 @@ import 'theme/app_theme.dart';
 /// 3. 포그라운드/백그라운드 메시지 처리
 /// 4. 토픽 구독/해제
 /// 5. 알림 클릭 시 딥링크 처리
-///
+//
 
 void main() async {
   // Flutter 바인딩 초기화 (Firebase 초기화 전 필수)

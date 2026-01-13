@@ -93,7 +93,7 @@ BEGIN
             VALUE "FileDescription", "advanced_flutter" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "advanced_flutter" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 com.sparta. All rights reserved." "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 com.sparta All rights reserved." "\0"
             VALUE "OriginalFilename", "advanced_flutter.exe" "\0"
             VALUE "ProductName", "advanced_flutter" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
