@@ -4,15 +4,17 @@ import 'package:flutter/material.dart';
 import 'firebase_options.dart';
 import 'handlers/notification_handler.dart';
 import 'routes/app_router.dart';
+import 'screens/maintenance_screen.dart';
 import 'services/fcm_service.dart';
+import 'services/remote_config_service.dart';
 import 'theme/app_theme.dart';
 
 /// ========================================
-/// FCM 푸시 알림 실습 앱
+/// FCM 푸시 알림 & Remote Config 실습 앱
 /// ========================================
 ///
-/// 이 앱은 Firebase Cloud Messaging(FCM)을 사용하여
-/// 푸시 알림을 구현하는 방법을 학습합니다.
+/// 이 앱은 Firebase Cloud Messaging(FCM)과 Remote Config를 사용하여
+/// 푸시 알림과 Feature Flags를 구현하는 방법을 학습합니다.
 ///
 /// 주요 학습 내용:
 /// 1. FCM 초기화 및 권한 요청
@@ -20,6 +22,9 @@ import 'theme/app_theme.dart';
 /// 3. 포그라운드/백그라운드 메시지 처리
 /// 4. 토픽 구독/해제
 /// 5. 알림 클릭 시 딥링크 처리
+/// 6. Remote Config를 통한 Feature Flags 관리
+/// 7. 임시점검 모드 (Maintenance Mode)
+/// 8. 새로운 탭 기능 (점진적 출시)
 //
 
 void main() async {
@@ -28,6 +33,9 @@ void main() async {
 
   // Firebase 초기화 (flutterfire configure로 생성된 옵션 사용)
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Remote Config 초기화
+  await RemoteConfigService().initialize();
 
   // 앱 실행
   runApp(const MyApp());
@@ -43,8 +51,12 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   final FcmService _fcmService = FcmService();
+  final RemoteConfigService _remoteConfig = RemoteConfigService();
   late final AppRouter _appRouter;
   late final NotificationHandler _notificationHandler;
+
+  // 임시점검 모드 상태
+  bool _isMaintenanceMode = false;
 
   @override
   void initState() {
@@ -52,6 +64,7 @@ class _MyAppState extends State<MyApp> {
     _appRouter = AppRouter();
     _notificationHandler = NotificationHandler(router: _appRouter.router);
     _initializeFcm();
+    _initializeRemoteConfig();
   }
 
   /// ========================================
@@ -73,10 +86,54 @@ class _MyAppState extends State<MyApp> {
         _notificationHandler.handleLocalNotificationClick;
   }
 
+  /// ========================================
+  /// Remote Config 초기화 및 리스너 설정
+  /// ========================================
+  void _initializeRemoteConfig() {
+    // 초기 임시점검 상태 확인
+    _checkMaintenanceMode();
+
+    // Remote Config 실시간 업데이트 리스너 설정
+    _remoteConfig.addOnConfigUpdatedListener((updatedKeys) {
+      debugPrint('[Main] Remote Config 업데이트 감지: $updatedKeys');
+      _checkMaintenanceMode();
+    });
+  }
+
+  /// 임시점검 모드 확인 및 상태 업데이트
+  void _checkMaintenanceMode() {
+    if (mounted) {
+      setState(() {
+        _isMaintenanceMode = _remoteConfig.isMaintenanceMode;
+      });
+    }
+  }
+
+  /// 임시점검 모드에서 다시 시도
+  Future<void> _retryFromMaintenance() async {
+    await _remoteConfig.fetchAndActivate();
+    _checkMaintenanceMode();
+  }
+
   @override
   Widget build(BuildContext context) {
+    // // 임시점검 모드일 경우 점검 화면 표시
+    // if (_isMaintenanceMode) {
+    //   return MaterialApp(
+    //     title: 'FCM & Remote Config',
+    //     debugShowCheckedModeBanner: false,
+    //     theme: AppTheme.light,
+    //     home: MaintenanceScreen(
+    //       message: _remoteConfig.maintenanceMessage,
+    //       endTime: _remoteConfig.maintenanceEndTime,
+    //       onRetry: _retryFromMaintenance,
+    //     ),
+    //   );
+    // }
+
+    // 정상 운영 시 메인 앱 표시
     return MaterialApp.router(
-      title: 'FCM 푸시 알림',
+      title: 'FCM & Remote Config',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       routerConfig: _appRouter.router,
